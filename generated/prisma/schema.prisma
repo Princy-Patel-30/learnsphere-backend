@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -15,13 +9,16 @@ datasource db {
 }
 
 model User {
-  id          Int          @id @default(autoincrement())
-  name        String
-  email       String       @unique
-  password    String
-  role        Role         @default(STUDENT)
-  courses     Course[]     @relation("InstructorCourses")
-  enrollments Enrollment[]
+  id                Int               @id @default(autoincrement())
+  name              String
+  email             String            @unique
+  password          String? // Optional for Google login users
+  role              Role              @default(STUDENT)
+  courses           Course[]          @relation("InstructorCourses")
+  enrollments       Enrollment[]
+  sessionProgresses SessionProgress[]
+  ratings           Rating[]          @relation("StudentRatings") // Only students create ratings
+  comments          Comment[] // Both roles can comment
 }
 
 model Course {
@@ -29,17 +26,67 @@ model Course {
   title        String
   description  String
   category     String
-  instructor   User?        @relation("InstructorCourses", fields: [instructorId], references: [id])
+  thumbnail    String?
   instructorId Int?
+  instructor   User?        @relation("InstructorCourses", fields: [instructorId], references: [id])
   enrollments  Enrollment[]
+  sessions     Session[]    @relation("CourseSessions")
+  ratings      Rating[] // Ratings for this course
+}
+
+model Session {
+  id                String            @id @default(cuid())
+  title             String
+  videoUrl          String
+  content           String
+  courseId          Int
+  course            Course            @relation("CourseSessions", fields: [courseId], references: [id])
+  sessionProgresses SessionProgress[]
+
+  @@unique([id])
+}
+
+model SessionProgress {
+  id        String  @id @default(cuid())
+  userId    Int
+  sessionId String
+  completed Boolean @default(false)
+  user      User    @relation(fields: [userId], references: [id])
+  session   Session @relation(fields: [sessionId], references: [id])
+
+  @@unique([userId, sessionId])
 }
 
 model Enrollment {
   id       Int    @id @default(autoincrement())
-  user     User   @relation(fields: [userId], references: [id])
   userId   Int
-  course   Course @relation(fields: [courseId], references: [id])
+  user     User   @relation(fields: [userId], references: [id])
   courseId Int
+  course   Course @relation(fields: [courseId], references: [id])
+}
+
+model Rating {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  courseId  Int
+  stars     Int // 1-5 star rating
+  review    String? // Optional text review
+  createdAt DateTime  @default(now())
+  user      User      @relation("StudentRatings", fields: [userId], references: [id])
+  course    Course    @relation(fields: [courseId], references: [id])
+  comments  Comment[] // Comments on this rating
+
+  @@unique([userId, courseId]) // One rating per user per course
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  ratingId  Int
+  content   String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  rating    Rating   @relation(fields: [ratingId], references: [id])
 }
 
 enum Role {
