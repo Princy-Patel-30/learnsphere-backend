@@ -33,8 +33,6 @@ export const register = async (req, res) => {
   }
 };
 
-
-
 export const login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -199,6 +197,7 @@ export const googleCallback = async (req, res) => {
   }
 };
 
+
 export const updateRole = async (req, res) => {
   const { role } = req.body;
   const userId = req.user?.id;
@@ -220,6 +219,15 @@ export const updateRole = async (req, res) => {
     // Generate new tokens with updated role
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
+
+    // Clear previous cookies for the other role
+    if (role === 'INSTRUCTOR') {
+      res.clearCookie('student_token');
+      res.clearCookie('student_refresh_token');
+    } else {
+      res.clearCookie('instructor_token');
+      res.clearCookie('instructor_refresh_token');
+    }
 
     const accessCookieName = role === 'INSTRUCTOR' ? 'instructor_token' : 'student_token';
     const refreshCookieName = role === 'INSTRUCTOR' ? 'instructor_refresh_token' : 'student_refresh_token';

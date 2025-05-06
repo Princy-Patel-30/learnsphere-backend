@@ -1,6 +1,7 @@
 import express from 'express';
-import { login, register, refresh, logout, googleLogin, googleCallback , updateRole} from '../controllers/auth.controller.js';
+import { login, register, refresh, logout, googleLogin, googleCallback, updateRole } from '../controllers/auth.controller.js';
 import passport from 'passport';
+import { authenticateAnyToken } from '../Middleware/auth.middleware.js';
 
 const router = express.Router();
 
@@ -14,5 +15,6 @@ router.get(
   passport.authenticate('google', { failureRedirect: '/login?error=auth_failed' }),
   googleCallback
 );
-router.put('/update-role', updateRole);
+router.put('/update-role',authenticateAnyToken, updateRole);
+
 export default router;
