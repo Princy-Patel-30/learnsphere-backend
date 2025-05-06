@@ -27,5 +27,5 @@ router.post('/courses/:courseId/rate', authenticateToken('STUDENT'), authorizeRo
 router.get('/courses/:courseId/ratings', getCourseRatings);
 router.post('/ratings/:ratingId/comment', authenticateToken('STUDENT'), authorizeRoles('STUDENT'), addComment);
 router.get('/ratings/:ratingId/comments', getComments);
-
+  
 export default router;

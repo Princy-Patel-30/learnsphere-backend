@@ -334,3 +334,96 @@ export const markSessionComplete = async (req, res) => {
   }
 };
 
+export const postCourseRating = async (req, res) => {
+  const { courseId } = req.params;
+  const { stars, review } = req.body;
+  const user = req.user;
+
+  if (!user?.id) {
+    return res.status(401).json({ message: 'Unauthorized: User ID missing' });
+  }
+
+  if (!stars || stars < 1 || stars > 5) {
+    return res.status(400).json({ message: 'Stars must be between 1 and 5' });
+  }
+
+  try {
+    const isEnrolled = await prisma.enrollment.findFirst({
+      where: { userId: user.id, courseId: parseInt(courseId) },
+    });
+
+    if (!isEnrolled) {
+      return res.status(403).json({ message: 'You must be enrolled to rate this course' });
+    }
+
+    const existingRating = await prisma.rating.findUnique({
+      where: { userId_courseId: { userId: user.id, courseId: parseInt(courseId) } },
+    });
+
+    if (existingRating) {
+      return res.status(400).json({ message: 'You have already rated this course' });
+    }
+
+    const rating = await prisma.rating.create({
+      data: {
+        userId: user.id,
+        courseId: parseInt(courseId),
+        stars,
+        review,
+      },
+      include: { user: { select: { id: true, name: true } } },
+    });
+
+    res.status(201).json({ message: 'Rating submitted successfully', rating });
+  } catch (error) {
+    console.error('Student Rating Error:', error);
+    res.status(500).json({ message: 'Failed to submit rating' });
+  }
+};
+
+export const postRatingComment = async (req, res) => {
+  const { ratingId } = req.params;
+  const { content } = req.body;
+  const userId = req.user?.id;
+
+  if (!userId) {
+    return res.status(401).json({ message: 'Unauthorized: User ID missing' });
+  }
+
+  if (!content) {
+    return res.status(400).json({ message: 'Comment content is required' });
+  }
+
+  try {
+    const rating = await prisma.rating.findUnique({
+      where: { id: parseInt(ratingId) },
+      include: { course: true },
+    });
+
+    if (!rating) {
+      return res.status(404).json({ message: 'Rating not found' });
+    }
+
+    const isEnrolled = await prisma.enrollment.findFirst({
+      where: { userId, courseId: rating.course.id },
+    });
+
+    if (!isEnrolled) {
+      return res.status(403).json({ message: 'You must be enrolled to comment on this rating' });
+    }
+
+    const comment = await prisma.comment.create({
+      data: {
+        userId,
+        ratingId: parseInt(ratingId),
+        content,
+      },
+      include: { user: { select: { id: true, name: true } } },
+    });
+
+    res.status(201).json({ message: 'Comment added successfully', comment });
+  } catch (error) {
+    console.error('Student Comment Error:', error);
+    res.status(500).json({ message: 'Failed to add comment' });
+  }
+};
