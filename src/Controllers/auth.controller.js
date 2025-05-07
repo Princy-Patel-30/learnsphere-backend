@@ -147,6 +147,7 @@ export const logout = (req, res) => {
 
 export const googleLogin = passport.authenticate('google', {
   scope: ['profile', 'email'],
+  prompt: 'select_account',
 });
 
 export const googleCallback = async (req, res) => {
